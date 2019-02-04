@@ -1,0 +1,47 @@
+@startuml
+
+actor Player <<inactive>>
+
+package "Per-Character Components" {
+    [Replay Stopper] as RS
+    [Reactor] <<inactive>>
+    [UI] <<inactive>>
+    () " " as Dot1
+    database "Perception Log" as PLog
+    database "Reaction Log" as RLog
+    
+    RS <-- PLog
+    RS <-- [Sensory System]
+    [Sensory System] --> Dot1 : Perception
+    Dot1 --> PLog
+    Dot1 ..> [UI] #888888
+    Dot1 ..> [Reactor] #888888
+    [UI] <..> Player #888888
+    [Reactor] ..> RLog #888888
+    [UI] ..> RLog #888888
+}
+
+cloud World
+
+World --> [Sensory System] : States
+World <.. [Reactor] #888888 : Reaction
+World <-- RLog
+[UI] ..> World #888888 : Reaction
+
+skinparam component {
+	backgroundColor<<inactive>> #f0f0f0
+	borderColor<<inactive>> #888888
+	fontColor<<inactive>> #888888
+	stereotypeFontColor<<inactive>> #888888
+}
+
+skinparam actor {
+	backgroundColor<<inactive>> #f0f0f0
+	borderColor<<inactive>> #888888
+	fontColor<<inactive>> #888888
+	stereotypeFontColor<<inactive>> #888888
+}
+
+hide stereotype
+
+@enduml
