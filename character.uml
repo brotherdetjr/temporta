@@ -23,6 +23,7 @@ cloud World
 
 World --> [Sensory System] : States
 World <-- [Reactor] : Reaction
+World <.. RLog #888888
 [UI] --> World : Reaction
 
 skinparam component {
