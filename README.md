@@ -1,6 +1,6 @@
 portalz
 =======
-![Alt text](https://g.gravizo.com/svg/human_character?https%3A%2F%2Fraw.githubusercontent.com%2Fbrotherdetjr%2Fportalz%2Fmaster%2FREADME.md)
+![Human Character Components](https://g.gravizo.com/source/human_character?https%3A%2F%2Fraw.githubusercontent.com%2Fbrotherdetjr%2Fportalz%2Fmaster%2FREADME.md)
 
 
 <details> 
