@@ -25,9 +25,7 @@ portalz
 14. In this particular quest you've got only ONE time machine (consisting of two portals). Moreover, you cannot DEactivate it after you turned it on.
 
 <details>
-<summary>
-**Solution**
-</summary>
+<summary>Solution</summary>
 
 - 0:00 - You arrive at B. Set up the outbound portal. Start moving towards C.
 - 1:00 - Halfway to C you stop and set up the inbound portal. Then Start moving towards A.
