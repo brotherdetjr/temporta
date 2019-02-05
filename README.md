@@ -18,7 +18,7 @@ portalz
 7. You have one, and it works as follows. In any place (not only at the stations but between them too) you set the portals: one inbound and one outbound. You may set them the other way round. Also, you may set them next to each other if you want, or far away.
 8. Then you need to activate your time machine. You can do it at any time, even when you are far away from the portals. However, you cannot move the portals after you activated them. Please note, that you can activate the time machine only AFTER you set the portals.
 9. Then you can enter the inbound portal whenever you like. You will appear on the "outbound" side right at the moment you activated your time machine!
-10. You won't face any [grandfather paradox](https://bit.ly/2toRlz6), because you travel into an "alternative branch" of your past. Also don't be afraid of meeting yourself from the past there.
+10. You won't face any kind of [grandfather paradox](https://bit.ly/2toRlz6), because you travel into an "alternative branch" of your past. Also don't be afraid of meeting yourself from the past there.
 11. Passing through the portals, their settlement and activation take almost no time.
 12. You can time-travel with the items you take, of course.
 13. However, the items don't get younger passing through the portals. Nor you do, unfortunately. E.g. you hold an item for half an hour, then jump into the portal to 100 years ago, and hold the item for 30 minutes more. The item will get older for 0.5 + 0.5 = 1 hour. No tricks here.
