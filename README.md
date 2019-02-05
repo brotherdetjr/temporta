@@ -35,6 +35,6 @@ portalz
 - 7:00 - You reach the portal. Jump into it.
 - 4:00 - You walk out of the portal at B. Both items are with you and have not expired yet.
 
-#### ¹ You can set the outbound portal later on your way to A, or even later when you bring the item X to B.
-[¹]:#-note-outbound-portals
+##### ¹ You can set the outbound portal later on your way to A, or even later when you bring the item X to B.
+[¹]:#-you-can-set-the-outbound-portal-later-on-your-way-to-a-or-even-later-when-you-bring-the-item-x-to-b
 </details>
