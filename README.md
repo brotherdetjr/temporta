@@ -27,7 +27,7 @@ portalz
 <details>
 <summary>Solution</summary>
 
-- 0:00 - You arrive at B. Set up the outbound portal. Start moving towards C.
+- 0:00 - You arrive at B. Set up the outbound portal[¹]. Start moving towards C.
 - 1:00 - Halfway to C you stop and set up the inbound portal. Then Start moving towards A.
 - 3:00 - You arrive at A. Pick the item X, start moving towards B.
 - 4:00 - You arrive at B. Drop the item (it still has a little bit of time before it expires). Activate the time machine. Start moving towards C.
@@ -35,4 +35,6 @@ portalz
 - 7:00 - You reach the portal. Jump into it.
 - 4:00 - You walk out of the portal at B. Both items are with you and have not expired yet.
 
+¹ You can set the outbound portal later on your way to A, or even later when you bring the item X to B.
+[¹]:#-note-outbound-portals
 </details>
