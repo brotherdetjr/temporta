@@ -24,7 +24,10 @@ portalz
 13. However, the items don't get younger passing through the portals. Nor you do, unfortunately. E.g. you hold an item for half an hour, then jump into the portal to 100 years ago, and hold the item for 30 minutes more. The item will get older for 0.5 + 0.5 = 1 hour. No tricks here.
 14. In this particular quest you've got only ONE time machine (consisting of two portals). Moreover, you cannot DEactivate it after you turned it on.
 
-<details><summary>Solution</summary>
+<details>
+<summary>
+**Solution**
+</summary>
 
 - 0:00 - You arrive at B. Set up the outbound portal. Start moving towards C.
 - 1:00 - Halfway to C you stop and set up the inbound portal. Then Start moving towards A.
