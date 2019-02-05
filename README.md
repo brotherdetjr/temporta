@@ -9,7 +9,7 @@ portalz
 ![Human Character Components](https://g.gravizo.com/source?https%3A%2F%2Fraw.githubusercontent.com%2Fbrotherdetjr%2Fportalz%2Fmaster%2Fcharacter-replay.uml)
 
 ## Sample Mission
-1. You travel between three lined up stations - A, B and C. It takes one hour to get from A to B or vice versa. It takes two hours to get from B to C or vice versa. Obviously, it will take 1 + 2 = 3 hours to get from A to C.
+1. You travel between three lined up stations &mdash; A, B and C. It takes one hour to get from A to B or vice versa. It takes two hours to get from B to C or vice versa. Obviously, it will take 1 + 2 = 3 hours to get from A to C.
 2. You arrive at B at midnight.
 3. A small item X will come to station A at 3 am and expire in a bit more than one hour after that. You can pick the items, or you can drop them where you are at the moment. You can do it as many times as you wish.
 4. Another item Y will come to C at 6 am and expire in a bit more than one hour as well.
@@ -22,7 +22,7 @@ portalz
 11. Passing through the portals, their settlement and activation take almost no time.
 12. You can time-travel with the items you take, of course.
 13. However, the items don't get younger passing through the portals. Nor you do, unfortunately. E.g. you hold an item for half an hour, then jump into the portal to 100 years ago, and hold the item for 30 minutes more. The item will get older for 0.5 + 0.5 = 1 hour. No tricks here.
-14. In this particular quest, you've got one-and-only time machine (consisting of two portals). Moreover, you cannot DEactivate it after you turned it on.
+14. In this particular quest, you've got a one-and-only time machine (consisting of two portals). Moreover, you cannot DEactivate it after you turned it on.
 
 <details>
 <summary>Solution</summary>
@@ -38,3 +38,7 @@ portalz
 ##### ¹ You can set the outbound portal later on your way to A, or even later when you bring the item X to B.
 [¹]:#-you-can-set-the-outbound-portal-later-on-your-way-to-a-or-even-later-when-you-bring-the-item-x-to-b
 </details>
+
+### Additional Details Unrelated to This Mission
+- You can go back to the future just entering an outbound portal. You will walk out of the inbound one.
+- However, the branch you are returning to was not "frozen", while you were traveling back in time, and you will return to its "bleeding edge" &mdash; NOT to the moment you left it. E.g. at midnight you jump back in time for 100 years. You spend there half an hour and then jump back to the future. You will walk out of the portal at 0:30.
