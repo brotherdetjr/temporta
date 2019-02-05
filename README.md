@@ -42,3 +42,4 @@ portalz
 ### Additional Details Unrelated to This Mission
 - You can go back to the future just entering an outbound portal. You will walk out of the inbound one.
 - However, the branch you are returning to was not "frozen", while you were traveling back in time, and you will return to its "bleeding edge" &mdash; NOT to the moment you left it. E.g. at midnight you jump back in time for 100 years. You spend there half an hour and then jump back to the future. You will walk out of the portal at 0:30.
+- Any other person from the past may enter your outbound portal, this allows them to travel to the future.
