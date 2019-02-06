@@ -1,5 +1,33 @@
 portalz
 =======
+
+## General Idea
+The goal is to make a multiplayer videogame with time-travelling.
+
+Even [a one-player game](https://en.wikipedia.org/wiki/Braid_(video_game)) with time-travelling is somewhat non-trivial. However, in the one-player game, the general approach seems obvious: you write log of the game and then "rewind" to a given logged state when needed. 
+
+This approach has obvious drawbacks when applied to a multiplayer game: you have to throw back to the past all the players at once. This might be useful under some circumstances, but it does not look like a universal approach.
+
+The general idea is to write a log as for the one-player game, but "rewind" the state only for a single player, creating an alternative branch of the game world.
+
+On the one hand the new branch should behave similarly to the original one, but on the other hand it should react to your actions. This can be easily achieved if we have a fully-deterministic game world: we just need to restore certain game state and let it evolve according to the prescribed deterministic laws.
+
+However, in a multiplayer game, we have **in**deterministic players' behaviour. We can record the actions of each player character and then replay them in the alternative branch until the character needs to react to something new introduced by your actions. Let's call this *handover of control*, because the character cannot be controlled by the recorded action log anymore, and needs to be controlled somehow else.
+
+The reaction to the new impacts can vary. It can be trivial: e.g. "replaying" character may freeze or even die. It can be complex with help of AI. Another option is to allow the player who owns this character in the original branch to control it in the alternative one.
+
+Every approach has its own drawbacks. Freezing or dying may seriously damage the gameplay because this kind of reaction is pretty unrealistic. The AI can bring more realism, but it is much more difficult to develop and still does not guarantee an adequate reaction. Manual control can overflow the player's mind: they will need to control multiple characters at once.
+
+We could put the branch on pause until the player responded to a suggestion to control yet another character.  However, this impacts the gameplay heavily. The best solution seems to be a combination of the above approaches. It will be discussed further.
+
+Another question is what is that "something new" the character has to react to. Every player character should have a record of their perception &mdash; everything the player was able to observe on their game screen. When the actual perception diverges from the recorded one, this means the character experiences "something new", and the handover of control is needed.
+
+## State of the Project
+At the moment, the project is in its earliest state. Every related document should be considered as draft.
+
+However, the initial idea was described in 2013 ([Russian](https://docs.google.com/document/d/1axiG1gClkzi3uJmkCTpP5wvLg5ag31wS_JMv_VkOXlU/edit?usp=sharing)).
+
+## Algorithms and Entities
 - `World` &mdash; contains `State`s and provides some of them to a `Sensory System` and receives `Reaction`s. Deterministically changes the `State`s according to received `Reaction`.
 - `Sensory System` &mdash; receives `State`s and converts them to a `Perception`. Works as a [pure function](https://en.wikipedia.org/wiki/Pure_function). `State`s can be both internal (i.e. belonging to a character) and external (i.e. belonging to a character's observed neighborhood).
 - `Reactor` &mdash; produces a `Reaction` on given `Perception`. Works as a [pure function](https://en.wikipedia.org/wiki/Pure_function) too.
