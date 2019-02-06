@@ -9,9 +9,9 @@ portalz
 ![Human Character Components](https://g.gravizo.com/source?https%3A%2F%2Fraw.githubusercontent.com%2Fbrotherdetjr%2Fportalz%2Fmaster%2Fcharacter-replay.uml)
 
 ## Sample Mission
-1. You travel between three lined up stations &mdash; A, B and C. It takes one hour to get from A to B or vice versa. It takes two hours to get from B to C or vice versa. Obviously, it will take 1 + 2 = 3 hours to get from A to C.
+1. You travel between three lined up stations &mdash; A, B and C. Station B stands between A and C. It takes one hour to get from A to B or vice versa. It takes two hours to get from B to C or vice versa. Obviously, it will take 1 + 2 = 3 hours to get from A to C.
 2. You arrive at B at midnight.
-3. A small item X will come to station A at 3 am and expire in a bit more than one hour after that. You can pick the items, or you can drop them where you are at the moment. You can do it as many times as you wish.
+3. A small item X will come to station A at 3 am and expire in a bit more than one hour after that. You can pick the items, or you can drop them where you are at the moment. You can do it as many times as you wish. The items are small, thus you can take and carry as many of them as you wish.
 4. Another item Y will come to C at 6 am and expire in a bit more than one hour as well.
 5. Your goal is to take the items to station B so that you had them both there, and none of the items were expired at the moment. This is needed because the items are the short-living halves of some mechanism you need to activate at B.
 6. Obviously, you need A TIME MACHINE!
