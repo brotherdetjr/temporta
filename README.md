@@ -1,5 +1,5 @@
-portalz
-=======
+Temporta
+========
 
 ## General Idea
 The goal is to make a multiplayer videogame with time-travelling.
@@ -26,6 +26,9 @@ Another question is what is that "something new" the character has to react to. 
 At the moment, the project is in its earliest state. Every related document should be considered as draft.
 
 However, the initial idea was described in 2013 ([Russian](https://docs.google.com/document/d/1axiG1gClkzi3uJmkCTpP5wvLg5ag31wS_JMv_VkOXlU/edit?usp=sharing)).
+
+## Project Name
+It's still TBD. [Temporta](https://translate.google.com/#view=home&op=translate&sl=pt&tl=en&text=temporta) is translated as "it matters" by Google from Portuguese. This sounds neutral and intriguing. Also, it is a portmanteau of "temporal" and "portal": the portals are supposed to be the main mean of time-travelling in the game.
 
 ## Algorithms and Entities
 - `World` &mdash; contains `State`s and provides some of them to a `Sensory System` and receives `Reaction`s. Deterministically changes the `State`s according to received `Reaction`.
