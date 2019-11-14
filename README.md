@@ -28,7 +28,7 @@ At the moment, the project is in its earliest state. Every related document shou
 However, the initial idea was described in 2013 ([Russian](https://docs.google.com/document/d/1axiG1gClkzi3uJmkCTpP5wvLg5ag31wS_JMv_VkOXlU/edit?usp=sharing)).
 
 ## Project Name
-It's still TBD. [Temporta](https://translate.google.com/#view=home&op=translate&sl=pt&tl=en&text=temporta) is translated as "it matters" from Portuguese by Google. This sounds neutral and intriguing. Also, it is a portmanteau of "temporal" and "portal": the portals are supposed to be the main mean of time-travelling in the game.
+It's still TBD. "Temporta" it is a portmanteau of "temporal" and "portal": the portals are supposed to be the main mean of time-travelling in the game.
 
 ## Algorithms and Entities
 - `World` &mdash; contains `State`s and provides some of them to a `Sensory System` and receives `Reaction`s. Deterministically changes the `State`s according to received `Reaction`.
