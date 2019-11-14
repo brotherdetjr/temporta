@@ -52,7 +52,7 @@ It's still TBD. [Temporta](https://translate.google.com/#view=home&op=translate&
 10. You won't face any kind of [grandfather paradox](https://bit.ly/2toRlz6), because you travel into an "alternative branch" of your past. Also don't be afraid of meeting yourself from the past there.
 11. Passing through the portals, their settlement and activation take almost no time.
 12. You can time-travel with the items you take, of course.
-13. However, the items don't get younger passing through the portals. Nor you do, unfortunately. E.g. you hold an item for half an hour, then jump into the portal to 100 years ago, and hold the item for 30 minutes more. The item will get older for 0.5 + 0.5 = 1 hour. No tricks here.
+13. However, they don't get younger passing through the portals. Nor you do, unfortunately. E.g. you hold an item for half an hour, then jump into the portal to 100 years ago, and hold the item for 30 minutes more. It will get older for 0.5 + 0.5 = 1 hour. No tricks here.
 14. In this particular quest, you've got a one-and-only time machine (consisting of two portals). Moreover, you cannot DEactivate it after you turned it on.
 
 <details>
@@ -60,13 +60,13 @@ It's still TBD. [Temporta](https://translate.google.com/#view=home&op=translate&
 
 - 0:00 - You arrive at B. Set up the outbound portal[¹]. Start moving towards C.
 - 1:00 - Halfway to C you stop and set up the inbound portal. Then Start moving towards A.
-- 3:00 - You arrive at A. Pick the item X, start moving towards B.
-- 4:00 - You arrive at B. Drop the item (it still has a little bit of time before it expires). Activate the time machine. Start moving towards C.
-- 6:00 - You arrive at C. Pick the item Y, start moving towards the inbound portal.
+- 3:00 - You arrive at A. Pick item X, start moving towards B.
+- 4:00 - You arrive at B. Drop item (it still has a little bit of time before it expires). Activate the time machine. Start moving towards C.
+- 6:00 - You arrive at C. Pick item Y, start moving towards the inbound portal.
 - 7:00 - You reach the portal. Jump into it.
 - 4:00 - You walk out of the portal at B. Both items are with you and have not expired yet.
 
-##### ¹ You can set the outbound portal later on your way to A, or even later when you bring the item X to B.
+##### ¹ You can set the outbound portal later on your way to A, or even later when you bring item X to B.
 [¹]:#-you-can-set-the-outbound-portal-later-on-your-way-to-a-or-even-later-when-you-bring-the-item-x-to-b
 </details>
 
