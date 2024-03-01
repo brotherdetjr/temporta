@@ -24,7 +24,7 @@ need geometry/geography support. On the other hand, relational modeling is extre
 familiar to most developers. Given that the game's world model is yet to be defined, this seems to be a good
 choice.
 
-`Multiverse` class embraces
+`Multiverse` class embraces:
 - A Multiverse database containing information shared among different Universes.
 - A map of Universe databases containing Universe states.
 - Logic of the state change both for Multiverse and all Universes, which is derived from incoming Actions.
