@@ -35,6 +35,10 @@ class Multiverse:
                 create table players (
                     id text primary key
                 );
+                create table properties (
+                    name text primary key,
+                    value blob
+                );
                 create table characters (
                     id text primary key,
                     player_id text,
@@ -45,6 +49,11 @@ class Multiverse:
                     foreign key (player_id) references players (id)
                 );
             ''')
+            self.__multiverse_db.execute(
+                'insert into properties (name, value) values (?, ?)',
+                ['tick', 0]
+            )
+            self.__multiverse_db.commit()
         Path(self.universes_path).mkdir(parents=True, exist_ok=True)
         for universe_id in self.__universe_ids():
             self.__universe_db_connect(universe_id)
@@ -151,6 +160,13 @@ class Multiverse:
 
             logging.error([e, kind, payload])
 
+    def next_tick(self) -> None:
+        # TODO here we'll be processing accumulated Actions
+        self.__multiverse_db.execute('''
+            update properties set value = value + 1 where name = 'tick'
+        ''')
+        self.__multiverse_db.commit()
+
 
 class TestMultiverseApply(unittest.TestCase):
     multiverse: Multiverse
@@ -165,6 +181,12 @@ class TestMultiverseApply(unittest.TestCase):
         self.multiverse.__exit__()
         self.multiverse_db.close()
         shutil.rmtree(self.multiverse.instance_id)
+
+    def test_create_multiverse(self):
+        self.assertEqual(
+            [('tick', 0)],
+            list(self.multiverse_db.execute('select name, value from properties'))
+        )
 
     def test_create_player(self):
         # when
@@ -341,6 +363,33 @@ class TestMultiverseApply(unittest.TestCase):
         self.assertEqual(
             [('player1', 0, 'Strezhevoy')],
             list(self.multiverse_db.execute('select player_id, universe_id, location_name from characters'))
+        )
+
+    def test_next_tick(self):
+        # expect
+        self.assertEqual(
+            0,
+            self.multiverse_db.execute('''
+                select value from properties where name='tick'
+            ''').fetchone()[0]
+        )
+        # when
+        self.multiverse.next_tick()
+        # then
+        self.assertEqual(
+            1,
+            self.multiverse_db.execute('''
+                select value from properties where name='tick'
+            ''').fetchone()[0]
+        )
+        # when
+        self.multiverse.next_tick()
+        # then
+        self.assertEqual(
+            2,
+            self.multiverse_db.execute('''
+                select value from properties where name='tick'
+            ''').fetchone()[0]
         )
 
     # independent universe DB accessor
