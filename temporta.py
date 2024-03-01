@@ -157,7 +157,7 @@ class TestMultiverseApply(unittest.TestCase):
     multiverse_db: Connection  # independent sqlite3 connection for tests
 
     def setUp(self):
-        self.multiverse = Multiverse(str(uuid4()))
+        self.multiverse = Multiverse('.test-' + str(uuid4()))
         self.multiverse.__enter__()
         self.multiverse_db = sqlite3.connect(f'{self.multiverse.instance_id}/multiverse.db')
 
