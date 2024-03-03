@@ -20,13 +20,13 @@ logging.basicConfig(level=logging.DEBUG)
 @dataclass
 class UniverseDatabase:
     connection: Connection
-    parent_universe_id: str | None
+    parent_universe_id: int | None
 
 
 class Multiverse:
     instance_id: str
     __multiverse_db: Connection
-    __universe_dbs: Dict[str, UniverseDatabase]
+    __universe_dbs: Dict[int, UniverseDatabase]
     __tick: int
 
     def __init__(self, instance_id: str) -> None:
@@ -50,8 +50,8 @@ class Multiverse:
                     value blob
                 );
                 create table universes (
-                    id text primary key,
-                    parent_id text,
+                    id integer primary key,
+                    parent_id integer,
                     
                     foreign key (parent_id) references universes (id)
                 );
@@ -70,7 +70,7 @@ class Multiverse:
             udb.connection.close()
         self.__multiverse_db.close()
 
-    def __universe_db_connect(self, universe_id: str, parent_universe_id: str | None) -> None:
+    def __universe_db_connect(self, universe_id: int, parent_universe_id: int | None) -> None:
         conn: Connection = sqlite3.connect(f'{self.instance_id}/{universe_id}.db')
         conn.execute('pragma foreign_keys = 1')
         self.__universe_dbs[universe_id] = UniverseDatabase(conn, parent_universe_id)
@@ -91,9 +91,11 @@ class Multiverse:
             match (kind, payload, character_id):
                 case ('CreatePlayer', str(player_id), None):
                     mdb.execute('insert into players (id) values (?)', (player_id,))
-                case ('CreateUniverse', (str() | None) as parent_id, None):
-                    uid = str(uuid4())
-                    mdb.execute('insert into universes (id, parent_id) values (?, ?)', (uid, parent_id))
+                case ('CreateUniverse', (int() | None) as parent_id, None):
+                    uid: int = mdb.execute(
+                        'insert into universes (parent_id) values (?)',
+                        (parent_id,)
+                    ).lastrowid
                     self.__universe_db_connect(uid, parent_id)
                     udb: Connection = self.__universe_dbs[uid].connection
                     udb.executescript('''
@@ -131,7 +133,7 @@ class Multiverse:
                         );
                         create index directions_from_name_idx on directions (from_name);
                     ''')
-                case (_, dict({'universe_id': str(uid)}) as payload, _):
+                case (_, dict({'universe_id': int(uid)}) as payload, _):
                     udb: UniverseDatabase = self.__universe_dbs[uid]
                     match kind:
                         case 'CreateLocation':
@@ -247,30 +249,28 @@ class TestMultiverse(unittest.TestCase):
         # when
         self.multiverse.apply('CreateUniverse')
         self.multiverse.commit()
-        uid: str = self.__fetch_universe_id()
         # then zeroth universe db is created
-        with self.__universe_db(uid) as udb:
+        with self.__universe_db(1) as udb:
             self.assertEqual(
                 ('empty',),
                 udb.execute("select 'empty'").fetchone()
             )
         # and first db is not created yet
         with self.assertRaises(Exception):
-            self.__universe_db('i_dont_exist')
+            self.__universe_db(100500)
 
     def test_create_location(self):
         # given
         self.multiverse.apply('CreateUniverse')
         self.multiverse.commit()
-        uid: str = self.__fetch_universe_id()
         # when
         self.multiverse.apply(
             'CreateLocation',
-            {'universe_id': uid, 'name': 'Strezhevoy', 'description': 'The best town in the world'}
+            {'universe_id': 1, 'name': 'Strezhevoy', 'description': 'The best town in the world'}
         )
         self.multiverse.commit()
         # then
-        with self.__universe_db(uid) as udb:
+        with self.__universe_db(1) as udb:
             self.assertEqual(
                 [('Strezhevoy', 'The best town in the world')],
                 udb.execute('select name, description from locations').fetchall()
@@ -278,11 +278,11 @@ class TestMultiverse(unittest.TestCase):
         # when a location with duplicate name is added
         self.multiverse.apply(
             'CreateLocation',
-            {'universe_id': uid, 'name': 'Strezhevoy', 'description': 'Some other description'}
+            {'universe_id': 1, 'name': 'Strezhevoy', 'description': 'Some other description'}
         )
         self.multiverse.commit()
         # then nothing is changed
-        with self.__universe_db(uid) as udb:
+        with self.__universe_db(1) as udb:
             self.assertEqual(
                 [('Strezhevoy', 'The best town in the world')],
                 udb.execute('select name, description from locations').fetchall()
@@ -292,31 +292,30 @@ class TestMultiverse(unittest.TestCase):
         # given
         self.multiverse.apply('CreateUniverse')
         self.multiverse.commit()
-        uid: str = self.__fetch_universe_id()
         self.multiverse.apply(
             'CreateLocation',
-            {'universe_id': uid, 'name': 'Strezhevoy', 'description': 'The best town in the world'}
+            {'universe_id': 1, 'name': 'Strezhevoy', 'description': 'The best town in the world'}
         )
         self.multiverse.apply(
             'CreateLocation',
-            {'universe_id': uid, 'name': 'Beijing', 'description': 'The capital of China'}
+            {'universe_id': 1, 'name': 'Beijing', 'description': 'The capital of China'}
         )
         self.multiverse.apply(
             'CreateLocation',
-            {'universe_id': uid, 'name': 'London', 'description': 'The capital of the UK'}
+            {'universe_id': 1, 'name': 'London', 'description': 'The capital of the UK'}
         )
         # when
         self.multiverse.apply(
             'ConnectLocations',
-            {'universe_id': uid, 'from_name': 'Strezhevoy', 'to_name': 'Beijing', 'travel_time': 3510}
+            {'universe_id': 1, 'from_name': 'Strezhevoy', 'to_name': 'Beijing', 'travel_time': 3510}
         )
         self.multiverse.apply(
             'ConnectLocations',
-            {'universe_id': uid, 'from_name': 'Strezhevoy', 'to_name': 'London', 'travel_time': 6000}
+            {'universe_id': 1, 'from_name': 'Strezhevoy', 'to_name': 'London', 'travel_time': 6000}
         )
         self.multiverse.commit()
         # then
-        with self.__universe_db(uid) as udb:
+        with self.__universe_db(1) as udb:
             self.assertEqual(
                 [
                     ('Strezhevoy', 'Beijing', 3510, 0),
@@ -329,11 +328,11 @@ class TestMultiverse(unittest.TestCase):
         # when inserting duplicate
         self.multiverse.apply(
             'ConnectLocations',
-            {'universe_id': uid, 'from_name': 'Strezhevoy', 'to_name': 'Beijing', 'travel_time': 9000}
+            {'universe_id': 1, 'from_name': 'Strezhevoy', 'to_name': 'Beijing', 'travel_time': 9000}
         )
         self.multiverse.commit()
         # then nothing changes
-        with self.__universe_db(uid) as udb:
+        with self.__universe_db(1) as udb:
             self.assertEqual(
                 [
                     ('Strezhevoy', 'Beijing', 3510, 0),
@@ -346,11 +345,11 @@ class TestMultiverse(unittest.TestCase):
         # when linking to itself
         self.multiverse.apply(
             'ConnectLocations',
-            {'universe_id': uid, 'from_name': 'Strezhevoy', 'to_name': 'Strezhevoy', 'travel_time': 100500}
+            {'universe_id': 1, 'from_name': 'Strezhevoy', 'to_name': 'Strezhevoy', 'travel_time': 100500}
         )
         self.multiverse.commit()
         # then nothing changes
-        with self.__universe_db(uid) as udb:
+        with self.__universe_db(1) as udb:
             self.assertEqual(
                 [
                     ('Strezhevoy', 'Beijing', 3510, 0),
@@ -363,11 +362,11 @@ class TestMultiverse(unittest.TestCase):
         # when linking with negative travel time
         self.multiverse.apply(
             'ConnectLocations',
-            {'universe_id': uid, 'from_name': 'London', 'to_name': 'Beijing', 'travel_time': -2}
+            {'universe_id': 1, 'from_name': 'London', 'to_name': 'Beijing', 'travel_time': -2}
         )
         self.multiverse.commit()
         # then nothing changes
-        with self.__universe_db(uid) as udb:
+        with self.__universe_db(1) as udb:
             self.assertEqual(
                 [
                     ('Strezhevoy', 'Beijing', 3510, 0),
@@ -409,13 +408,12 @@ class TestMultiverse(unittest.TestCase):
         # given
         self.multiverse.apply('CreateUniverse')
         self.multiverse.commit()
-        uid: str = self.__fetch_universe_id()
         # when
         self.multiverse.record_action(
             42,
             'fake_character_id',
             'CreateLocation',
-            {'universe_id': uid, 'name': 'Tbilisi', 'description': 'The capital of Georgia'}
+            {'universe_id': 1, 'name': 'Tbilisi', 'description': 'The capital of Georgia'}
         )
         self.multiverse.commit()
         # then
@@ -425,24 +423,24 @@ class TestMultiverse(unittest.TestCase):
                     1,
                     42,
                     'CreateLocation',
-                    {'universe_id': uid, 'name': 'Tbilisi', 'description': 'The capital of Georgia'},
+                    {'universe_id': 1, 'name': 'Tbilisi', 'description': 'The capital of Georgia'},
                     'fake_character_id'
                 )
             ],
-            self.__fetch_actions(uid)
+            self.__fetch_actions(1)
         )
         # when
         self.multiverse.record_action(
             9000,
             'fake_character_id',
             'CreateLocation',
-            {'universe_id': uid, 'name': 'London', 'description': 'The capital of the UK'}
+            {'universe_id': 1, 'name': 'London', 'description': 'The capital of the UK'}
         )
         self.multiverse.record_action(
             9001,
             'another_fake_character_id',
             'ConnectLocations',
-            {'universe_id': uid, 'from_name': 'London', 'to_name': 'Tbilisi', 'travel_time': 33}
+            {'universe_id': 1, 'from_name': 'London', 'to_name': 'Tbilisi', 'travel_time': 33}
         )
         self.multiverse.commit()
         # then
@@ -452,28 +450,28 @@ class TestMultiverse(unittest.TestCase):
                     1,
                     42,
                     'CreateLocation',
-                    {'universe_id': uid, 'name': 'Tbilisi', 'description': 'The capital of Georgia'},
+                    {'universe_id': 1, 'name': 'Tbilisi', 'description': 'The capital of Georgia'},
                     'fake_character_id'
                 ),
                 (
                     2,
                     9000,
                     'CreateLocation',
-                    {'universe_id': uid, 'name': 'London', 'description': 'The capital of the UK'},
+                    {'universe_id': 1, 'name': 'London', 'description': 'The capital of the UK'},
                     'fake_character_id'
                 ),
                 (
                     2,
                     9001,
                     'ConnectLocations',
-                    {'universe_id': uid, 'from_name': 'London', 'to_name': 'Tbilisi', 'travel_time': 33},
+                    {'universe_id': 1, 'from_name': 'London', 'to_name': 'Tbilisi', 'travel_time': 33},
                     'another_fake_character_id'
                 ),
             ],
-            self.__fetch_actions(uid)
+            self.__fetch_actions(1)
         )
 
-    def __fetch_actions(self, universe_id: str) -> list[Any]:
+    def __fetch_actions(self, universe_id: int) -> list[Any]:
         with self.__universe_db(universe_id) as udb:
             rows: list[Any] = udb.execute('''
                 select tick, subtick, kind, payload, character_id from actions order by tick, subtick
@@ -481,7 +479,7 @@ class TestMultiverse(unittest.TestCase):
             return list(map(lambda row: row[0:3] + (json.loads(row[3]),) + row[4:], rows))
 
     # independent universe DB accessor
-    def __universe_db(self, universe_id: str) -> Connection:
+    def __universe_db(self, universe_id: int) -> Connection:
         path = f'{self.multiverse.instance_id}/{universe_id}.db'
         # In the tests we really want to fail,
         # if the requested database does not exist.
@@ -489,9 +487,6 @@ class TestMultiverse(unittest.TestCase):
             raise Exception(f'No such database: {path}')
         # noinspection PyTypeChecker
         return closing(sqlite3.connect(path))
-
-    def __fetch_universe_id(self):
-        return self.multiverse_db.execute('select id from universes').fetchone()[0]
 
 
 if __name__ == '__main__':
