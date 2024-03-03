@@ -6,6 +6,7 @@ import shutil
 import sqlite3
 import unittest
 from contextlib import closing
+from dataclasses import dataclass
 from pathlib import Path
 from sqlite3 import Connection
 from typing import Dict
@@ -15,15 +16,24 @@ from uuid import uuid4
 logging.basicConfig(level=logging.DEBUG)
 
 
+@dataclass
+class UniverseDatabase:
+    connection: Connection
+    parent_universe_id: str | None
+
+
 class Multiverse:
     instance_id: str
     __multiverse_db: Connection
-    __universe_dbs: Dict[str, Connection] = {}
-    __tick: int = 0
-    __subtick: int = 0
+    __universe_dbs: Dict[str, UniverseDatabase]
+    __tick: int
+    __subtick: int
 
     def __init__(self, instance_id: str) -> None:
         self.instance_id = instance_id
+        self.__universe_dbs = {}
+        self.__tick = 0
+        self.__subtick = 0
 
     def __enter__(self) -> Multiverse:
         database_path = f'{self.instance_id}/multiverse.db'
@@ -52,19 +62,19 @@ class Multiverse:
                 ['tick', 0]
             )
             self.__multiverse_db.commit()
-        for row in self.__multiverse_db.execute('select id from universes').fetchall():
-            self.__universe_db_connect(row[0])
+        for row in self.__multiverse_db.execute('select id, parent_id from universes').fetchall():
+            self.__universe_db_connect(row[0], row[1])
         return self
 
     def __exit__(self, *args) -> None:
-        for _, value in self.__universe_dbs.items():
-            value.close()
+        for _, udb in self.__universe_dbs.items():
+            udb.connection.close()
         self.__multiverse_db.close()
 
-    def __universe_db_connect(self, universe_id: str) -> None:
+    def __universe_db_connect(self, universe_id: str, parent_universe_id: str | None) -> None:
         conn: Connection = sqlite3.connect(f'{self.instance_id}/{universe_id}.db')
         conn.execute('pragma foreign_keys = 1')
-        self.__universe_dbs[universe_id] = conn
+        self.__universe_dbs[universe_id] = UniverseDatabase(conn, parent_universe_id)
 
     def apply(self, kind: str, payload: dict[str, str | int] | str | None = None) -> None:
         logging.debug({
@@ -81,8 +91,8 @@ class Multiverse:
                 case ('CreateUniverse', (str() | None) as parent_id):
                     uid = str(uuid4())
                     mdb.execute('insert into universes (id, parent_id) values (?, ?)', [uid, parent_id])
-                    self.__universe_db_connect(uid)
-                    udb: Connection = self.__universe_dbs[uid]
+                    self.__universe_db_connect(uid, parent_id)
+                    udb: Connection = self.__universe_dbs[uid].connection
                     udb.executescript('''
                         create table actions (
                             tick integer not null,
@@ -118,10 +128,10 @@ class Multiverse:
                         create index directions_from_name_idx on directions (from_name);
                     ''')
                 case (str(action_name), dict({'universe_id': str(uid)}) as payload):
-                    udb: Connection = self.__universe_dbs[uid]
+                    udb: UniverseDatabase = self.__universe_dbs[uid]
                     match action_name:
                         case 'CreateLocation':
-                            udb.execute(
+                            udb.connection.execute(
                                 'insert into locations (name, description) values (?, ?)',
                                 [
                                     payload['name'],
@@ -136,7 +146,7 @@ class Multiverse:
                                 raise Exception('Cannot connect location to itself')
                             if travel_time < 0:
                                 raise Exception('Travel time cannot be less than zero')
-                            udb.executemany(
+                            udb.connection.executemany(
                                 '''
                                     insert into directions values
                                     (?, ?, ?, (select count(*) from directions where from_name = ?))
@@ -147,7 +157,7 @@ class Multiverse:
                                 ]
                             )
                         case 'CreateCharacter':
-                            cursor = udb.execute(
+                            cursor = udb.connection.execute(
                                 'select count(name) from locations where name = ?',
                                 [payload['location_name']]
                             )
@@ -178,8 +188,8 @@ class Multiverse:
             update properties set value = value + 1 where name = 'tick' returning value
         ''').fetchone()[0]
         self.__multiverse_db.commit()
-        for row in self.__multiverse_db.execute('select id from universes').fetchall():
-            self.__universe_dbs[row[0]].commit()
+        for _, udb in self.__universe_dbs.items():
+            udb.connection.commit()
         self.__tick = next_tick
 
 
