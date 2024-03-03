@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -76,7 +77,12 @@ class Multiverse:
         conn.execute('pragma foreign_keys = 1')
         self.__universe_dbs[universe_id] = UniverseDatabase(conn, parent_universe_id)
 
-    def apply(self, kind: str, payload: dict[str, str | int] | str | None = None) -> None:
+    def apply(
+            self,
+            kind: str,
+            payload: dict[str, str | int] | str | None = None,
+            character_id: str | None = None
+    ) -> None:
         logging.debug({
             'event_type': 'BEFORE_APPLY',
             'tick': self.__tick,
@@ -85,10 +91,10 @@ class Multiverse:
         })
         mdb = self.__multiverse_db
         try:
-            match (kind, payload):
-                case ('CreatePlayer', str(player_id)):
+            match (kind, payload, character_id):
+                case ('CreatePlayer', str(player_id), None):
                     mdb.execute('insert into players (id) values (?)', [player_id])
-                case ('CreateUniverse', (str() | None) as parent_id):
+                case ('CreateUniverse', (str() | None) as parent_id, None):
                     uid = str(uuid4())
                     mdb.execute('insert into universes (id, parent_id) values (?, ?)', [uid, parent_id])
                     self.__universe_db_connect(uid, parent_id)
@@ -97,10 +103,11 @@ class Multiverse:
                         create table actions (
                             tick integer not null,
                             subtick integer not null,
+                            kind text not null,
+                            payload text,
                             character_id text not null,
-                            content text not null,
                             
-                            primary key (tick, subtick, character_id)
+                            primary key (tick, subtick, kind, payload, character_id)
                         );
                         create table perceptions (
                             tick integer not null,
@@ -127,9 +134,9 @@ class Multiverse:
                         );
                         create index directions_from_name_idx on directions (from_name);
                     ''')
-                case (str(action_name), dict({'universe_id': str(uid)}) as payload):
+                case (_, dict({'universe_id': str(uid)}) as payload, _):
                     udb: UniverseDatabase = self.__universe_dbs[uid]
-                    match action_name:
+                    match kind:
                         case 'CreateLocation':
                             udb.connection.execute(
                                 'insert into locations (name, description) values (?, ?)',
@@ -170,6 +177,10 @@ class Multiverse:
                         'subtick': self.__subtick,
                         'value': {'kind': kind, 'payload': payload}
                     })
+                    udb.connection.execute(
+                        'insert into actions (tick, subtick, kind, payload, character_id) values (?, ?, ?, ?, ?)',
+                        (self.__tick, self.__subtick, kind, json.dumps(payload), character_id)
+                    )
                     self.__subtick = self.__subtick + 1
 
         except Exception as e:
@@ -367,7 +378,7 @@ class TestMultiverseApply(unittest.TestCase):
                 udb.execute('select from_name, to_name, travel_time, ordinal from directions').fetchall()
             )
 
-    def test_create_character(self):
+    def test_action_recording(self):
         # given
         self.multiverse.apply('CreateUniverse', None)
         self.multiverse.commit()
