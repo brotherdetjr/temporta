@@ -218,6 +218,7 @@ class TestMultiverse(unittest.TestCase):
         shutil.rmtree(self.multiverse.instance_id)
 
     def test_create_multiverse(self):
+        # expect
         self.assertEqual(
             [('tick', 0)],
             self.multiverse_db.execute('select name, value from properties').fetchall()
@@ -244,7 +245,7 @@ class TestMultiverse(unittest.TestCase):
 
     def test_create_universe(self):
         # when
-        self.multiverse.apply('CreateUniverse', None)
+        self.multiverse.apply('CreateUniverse')
         self.multiverse.commit()
         uid: str = self.__fetch_universe_id()
         # then zeroth universe db is created
@@ -259,7 +260,7 @@ class TestMultiverse(unittest.TestCase):
 
     def test_create_location(self):
         # given
-        self.multiverse.apply('CreateUniverse', None)
+        self.multiverse.apply('CreateUniverse')
         self.multiverse.commit()
         uid: str = self.__fetch_universe_id()
         # when
@@ -289,7 +290,7 @@ class TestMultiverse(unittest.TestCase):
 
     def test_connect_locations(self):
         # given
-        self.multiverse.apply('CreateUniverse', None)
+        self.multiverse.apply('CreateUniverse')
         self.multiverse.commit()
         uid: str = self.__fetch_universe_id()
         self.multiverse.apply(
