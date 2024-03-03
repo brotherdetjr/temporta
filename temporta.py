@@ -10,7 +10,7 @@ from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from sqlite3 import Connection
-from typing import Dict
+from typing import Dict, Any
 from uuid import uuid4
 
 # TODO remove
@@ -28,13 +28,11 @@ class Multiverse:
     __multiverse_db: Connection
     __universe_dbs: Dict[str, UniverseDatabase]
     __tick: int
-    __subtick: int
 
     def __init__(self, instance_id: str) -> None:
         self.instance_id = instance_id
         self.__universe_dbs = {}
         self.__tick = 0
-        self.__subtick = 0
 
     def __enter__(self) -> Multiverse:
         database_path = f'{self.instance_id}/multiverse.db'
@@ -60,7 +58,7 @@ class Multiverse:
             ''')
             self.__multiverse_db.execute(
                 'insert into properties (name, value) values (?, ?)',
-                ['tick', 0]
+                ('tick', 0)
             )
             self.__multiverse_db.commit()
         for row in self.__multiverse_db.execute('select id, parent_id from universes').fetchall():
@@ -86,17 +84,16 @@ class Multiverse:
         logging.debug({
             'event_type': 'BEFORE_APPLY',
             'tick': self.__tick,
-            'subtick': self.__subtick,
             'value': {'kind': kind, 'payload': payload}
         })
         mdb = self.__multiverse_db
         try:
             match (kind, payload, character_id):
                 case ('CreatePlayer', str(player_id), None):
-                    mdb.execute('insert into players (id) values (?)', [player_id])
+                    mdb.execute('insert into players (id) values (?)', (player_id,))
                 case ('CreateUniverse', (str() | None) as parent_id, None):
                     uid = str(uuid4())
-                    mdb.execute('insert into universes (id, parent_id) values (?, ?)', [uid, parent_id])
+                    mdb.execute('insert into universes (id, parent_id) values (?, ?)', (uid, parent_id))
                     self.__universe_db_connect(uid, parent_id)
                     udb: Connection = self.__universe_dbs[uid].connection
                     udb.executescript('''
@@ -140,10 +137,7 @@ class Multiverse:
                         case 'CreateLocation':
                             udb.connection.execute(
                                 'insert into locations (name, description) values (?, ?)',
-                                [
-                                    payload['name'],
-                                    payload['description']
-                                ]
+                                (payload['name'], payload['description'])
                             )
                         case 'ConnectLocations':
                             from_name = payload['from_name']
@@ -166,22 +160,10 @@ class Multiverse:
                         case 'CreateCharacter':
                             cursor = udb.connection.execute(
                                 'select count(name) from locations where name = ?',
-                                [payload['location_name']]
+                                (payload['location_name'])
                             )
                             if cursor.fetchone()[0] == 0:
                                 raise Exception('Location not found')
-
-                    logging.debug({
-                        'event_type': 'STORE_ACTION',
-                        'tick': self.__tick,
-                        'subtick': self.__subtick,
-                        'value': {'kind': kind, 'payload': payload}
-                    })
-                    udb.connection.execute(
-                        'insert into actions (tick, subtick, kind, payload, character_id) values (?, ?, ?, ?, ?)',
-                        (self.__tick, self.__subtick, kind, json.dumps(payload), character_id)
-                    )
-                    self.__subtick = self.__subtick + 1
 
         except Exception as e:
             # TODO send error message back to user
@@ -190,9 +172,26 @@ class Multiverse:
             logging.error({
                 'event_type': 'APPLY_ERROR',
                 'tick': self.__tick,
-                'subtick': self.__subtick,
                 'value': {'error': e, 'kind': kind, 'payload': payload}
             })
+
+    def record_action(
+            self,
+            subtick: int,
+            character_id: str,
+            kind: str,
+            payload: dict[str, str | int] | str | None = None,
+    ) -> None:
+        logging.debug({
+            'event_type': 'STORE_ACTION',
+            'tick': self.__tick,
+            'subtick': subtick,
+            'value': {'kind': kind, 'payload': payload}
+        })
+        self.__universe_dbs[payload['universe_id']].connection.execute(
+            'insert into actions (tick, subtick, kind, payload, character_id) values (?, ?, ?, ?, ?)',
+            (self.__tick, subtick, kind, json.dumps(payload), character_id)
+        )
 
     def commit(self) -> None:
         next_tick: int = self.__multiverse_db.execute('''
@@ -204,7 +203,7 @@ class Multiverse:
         self.__tick = next_tick
 
 
-class TestMultiverseApply(unittest.TestCase):
+class TestMultiverse(unittest.TestCase):
     multiverse: Multiverse
     multiverse_db: Connection  # independent sqlite3 connection for tests
 
@@ -378,25 +377,6 @@ class TestMultiverseApply(unittest.TestCase):
                 udb.execute('select from_name, to_name, travel_time, ordinal from directions').fetchall()
             )
 
-    def test_action_recording(self):
-        # given
-        self.multiverse.apply('CreateUniverse', None)
-        self.multiverse.commit()
-        uid: str = self.__fetch_universe_id()
-        self.multiverse.apply('CreatePlayer', 'player1')
-        self.multiverse.apply(
-            'CreateLocation',
-            {'universe_id': uid, 'name': 'Strezhevoy', 'description': 'The best town in the world'}
-        )
-        # when
-        self.multiverse.apply(
-            'CreateCharacter',
-            {'universe_id': uid, 'player_id': 'player1', 'location_name': 'Strezhevoy'}
-        )
-        self.multiverse.commit()
-        # then
-        # TODO
-
     def test_commit(self):
         # expect
         self.assertEqual(
@@ -423,6 +403,81 @@ class TestMultiverseApply(unittest.TestCase):
                 select value from properties where name='tick'
             ''').fetchone()[0]
         )
+
+    def test_record_action(self):
+        # given
+        self.multiverse.apply('CreateUniverse')
+        self.multiverse.commit()
+        uid: str = self.__fetch_universe_id()
+        # when
+        self.multiverse.record_action(
+            42,
+            'fake_character_id',
+            'CreateLocation',
+            {'universe_id': uid, 'name': 'Tbilisi', 'description': 'The capital of Georgia'}
+        )
+        self.multiverse.commit()
+        # then
+        self.assertEqual(
+            [
+                (
+                    1,
+                    42,
+                    'CreateLocation',
+                    {'universe_id': uid, 'name': 'Tbilisi', 'description': 'The capital of Georgia'},
+                    'fake_character_id'
+                )
+            ],
+            self.__fetch_actions(uid)
+        )
+        # when
+        self.multiverse.record_action(
+            9000,
+            'fake_character_id',
+            'CreateLocation',
+            {'universe_id': uid, 'name': 'London', 'description': 'The capital of the UK'}
+        )
+        self.multiverse.record_action(
+            9001,
+            'another_fake_character_id',
+            'ConnectLocations',
+            {'universe_id': uid, 'from_name': 'London', 'to_name': 'Tbilisi', 'travel_time': 33}
+        )
+        self.multiverse.commit()
+        # then
+        self.assertEqual(
+            [
+                (
+                    1,
+                    42,
+                    'CreateLocation',
+                    {'universe_id': uid, 'name': 'Tbilisi', 'description': 'The capital of Georgia'},
+                    'fake_character_id'
+                ),
+                (
+                    2,
+                    9000,
+                    'CreateLocation',
+                    {'universe_id': uid, 'name': 'London', 'description': 'The capital of the UK'},
+                    'fake_character_id'
+                ),
+                (
+                    2,
+                    9001,
+                    'ConnectLocations',
+                    {'universe_id': uid, 'from_name': 'London', 'to_name': 'Tbilisi', 'travel_time': 33},
+                    'another_fake_character_id'
+                ),
+            ],
+            self.__fetch_actions(uid)
+        )
+
+    def __fetch_actions(self, universe_id: str) -> list[Any]:
+        with self.__universe_db(universe_id) as udb:
+            rows: list[Any] = udb.execute('''
+                select tick, subtick, kind, payload, character_id from actions order by tick, subtick
+            ''').fetchall()
+            return list(map(lambda row: row[0:3] + (json.loads(row[3]),) + row[4:], rows))
 
     # independent universe DB accessor
     def __universe_db(self, universe_id: str) -> Connection:
