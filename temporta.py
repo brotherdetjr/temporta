@@ -476,6 +476,8 @@ class TestMultiverse(unittest.TestCase):
             rows: list[Any] = udb.execute('''
                 select tick, subtick, kind, payload, character_id from actions order by tick, subtick
             ''').fetchall()
+            # The below ugly piece of code just parses "payload" JSON string (which is 3rd element of the tuple),
+            # and replaces it with parsed value for every row of the result set.
             return list(map(lambda row: row[0:3] + (json.loads(row[3]),) + row[4:], rows))
 
     # independent universe DB accessor
