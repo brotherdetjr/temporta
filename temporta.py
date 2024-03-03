@@ -11,11 +11,16 @@ from sqlite3 import Connection
 from typing import Dict
 from uuid import uuid4
 
+# TODO remove
+logging.basicConfig(level=logging.DEBUG)
+
 
 class Multiverse:
     instance_id: str
     __multiverse_db: Connection
     __universe_dbs: Dict[str, Connection] = {}
+    __tick: int = 0
+    __subtick: int = 0
 
     def __init__(self, instance_id: str) -> None:
         self.instance_id = instance_id
@@ -41,15 +46,6 @@ class Multiverse:
                     
                     foreign key (parent_id) references universes (id)
                 );
-                create table characters (
-                    id text primary key,
-                    player_id text,
-                    universe_id integer,
-                    location_name text,
-
-                    unique (id, player_id),
-                    foreign key (player_id) references players (id)
-                );
             ''')
             self.__multiverse_db.execute(
                 'insert into properties (name, value) values (?, ?)',
@@ -71,6 +67,12 @@ class Multiverse:
         self.__universe_dbs[universe_id] = conn
 
     def apply(self, kind: str, payload: dict[str, str | int] | str | None = None) -> None:
+        logging.debug({
+            'event_type': 'BEFORE_APPLY',
+            'tick': self.__tick,
+            'subtick': self.__subtick,
+            'value': {'kind': kind, 'payload': payload}
+        })
         mdb = self.__multiverse_db
         try:
             match (kind, payload):
@@ -82,6 +84,22 @@ class Multiverse:
                     self.__universe_db_connect(uid)
                     udb: Connection = self.__universe_dbs[uid]
                     udb.executescript('''
+                        create table actions (
+                            tick integer not null,
+                            subtick integer not null,
+                            character_id text not null,
+                            content text not null,
+                            
+                            primary key (tick, subtick, character_id)
+                        );
+                        create table perceptions (
+                            tick integer not null,
+                            subtick integer not null,
+                            character_id text not null,
+                            content text not null,
+                            
+                            primary key (tick, subtick, character_id)
+                        );
                         create table locations (
                             name text primary key,
                             description text not null
@@ -135,36 +153,34 @@ class Multiverse:
                             )
                             if cursor.fetchone()[0] == 0:
                                 raise Exception('Location not found')
-                            mdb.execute(
-                                '''
-                                    insert into characters (id, player_id, universe_id, location_name)
-                                    values (?, ?, ?, ?)
-                                ''',
-                                [
-                                    str(uuid4()),
-                                    payload['player_id'],
-                                    uid,
-                                    payload['location_name']
-                                ]
-                            )
+
+                    logging.debug({
+                        'event_type': 'STORE_ACTION',
+                        'tick': self.__tick,
+                        'subtick': self.__subtick,
+                        'value': {'kind': kind, 'payload': payload}
+                    })
+                    self.__subtick = self.__subtick + 1
 
         except Exception as e:
             # TODO send error message back to user
             # TODO implement messaging
 
-            logging.error([e, kind, payload])
-
-    def next_tick(self) -> None:
-        # TODO here we'll be processing accumulated Actions
-        self.__multiverse_db.execute('''
-            update properties set value = value + 1 where name = 'tick'
-        ''')
-        self.__multiverse_db.commit()  # TODO remove later?
+            logging.error({
+                'event_type': 'APPLY_ERROR',
+                'tick': self.__tick,
+                'subtick': self.__subtick,
+                'value': {'error': e, 'kind': kind, 'payload': payload}
+            })
 
     def commit(self) -> None:
+        next_tick: int = self.__multiverse_db.execute('''
+            update properties set value = value + 1 where name = 'tick' returning value
+        ''').fetchone()[0]
         self.__multiverse_db.commit()
         for row in self.__multiverse_db.execute('select id from universes').fetchall():
             self.__universe_dbs[row[0]].commit()
+        self.__tick = next_tick
 
 
 class TestMultiverseApply(unittest.TestCase):
@@ -358,32 +374,9 @@ class TestMultiverseApply(unittest.TestCase):
         )
         self.multiverse.commit()
         # then
-        self.assertEqual(
-            [('player1', uid, 'Strezhevoy')],
-            self.multiverse_db.execute('select player_id, universe_id, location_name from characters').fetchall()
-        )
-        # when universe does not exist
-        self.multiverse.apply(
-            'CreateCharacter',
-            {'universe_id': 'i_dont_exist', 'player_id': 'ignore', 'location_name': 'ignore'}
-        )
-        self.multiverse.commit()
-        # then universe is not created
-        with self.assertRaises(Exception):
-            self.__universe_db('i_dont_exist')
-        # when location does not exist
-        self.multiverse.apply(
-            'CreateCharacter',
-            {'universe_id': uid, 'player_id': 'player1', 'location_name': 'Beijing'}
-        )
-        self.multiverse.commit()
-        # then character is not created
-        self.assertEqual(
-            [('player1', uid, 'Strezhevoy')],
-            self.multiverse_db.execute('select player_id, universe_id, location_name from characters').fetchall()
-        )
+        # TODO
 
-    def test_next_tick(self):
+    def test_commit(self):
         # expect
         self.assertEqual(
             0,
@@ -392,7 +385,7 @@ class TestMultiverseApply(unittest.TestCase):
             ''').fetchone()[0]
         )
         # when
-        self.multiverse.next_tick()
+        self.multiverse.commit()
         # then
         self.assertEqual(
             1,
@@ -401,7 +394,7 @@ class TestMultiverseApply(unittest.TestCase):
             ''').fetchone()[0]
         )
         # when
-        self.multiverse.next_tick()
+        self.multiverse.commit()
         # then
         self.assertEqual(
             2,
