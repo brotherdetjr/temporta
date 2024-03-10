@@ -198,7 +198,8 @@ class TestMultiverse(unittest.TestCase):
         # when
         self.multiverse.record_action(
             42,
-            CreateLocation(name='Tbilisi', universe_id=1, description='The capital of Georgia')
+            0,
+            CreateLocation(name='Tbilisi', universe_id=1, description='The capital of Georgia'),
         )
         self.multiverse.commit()
         # then
@@ -207,8 +208,8 @@ class TestMultiverse(unittest.TestCase):
                 {
                     'tick': 1,
                     'subtick': 42,
-                    'character_id': None,
-                    'payload': {
+                    'character_id': 0,
+                    'payload_json': {
                         'kind': 'CreateLocation',
                         'universe_id': 1,
                         'name': 'Tbilisi',
@@ -221,10 +222,12 @@ class TestMultiverse(unittest.TestCase):
         # when
         self.multiverse.record_action(
             9000,
+            1,
             CreateLocation(name='London', universe_id=1, description='The capital of the UK')
         )
         self.multiverse.record_action(
             9001,
+            2,
             ConnectLocations(from_name='London', to_name='Tbilisi', universe_id=1, travel_time=33)
         )
         self.multiverse.commit()
@@ -234,8 +237,8 @@ class TestMultiverse(unittest.TestCase):
                 {
                     'tick': 1,
                     'subtick': 42,
-                    'character_id': None,
-                    'payload': {
+                    'character_id': 0,
+                    'payload_json': {
                         'kind': 'CreateLocation',
                         'universe_id': 1,
                         'name': 'Tbilisi',
@@ -245,8 +248,8 @@ class TestMultiverse(unittest.TestCase):
                 {
                     'tick': 2,
                     'subtick': 9000,
-                    'character_id': None,
-                    'payload': {
+                    'character_id': 1,
+                    'payload_json': {
                         'kind': 'CreateLocation',
                         'universe_id': 1,
                         'name': 'London',
@@ -256,8 +259,8 @@ class TestMultiverse(unittest.TestCase):
                 {
                     'tick': 2,
                     'subtick': 9001,
-                    'character_id': None,
-                    'payload': {
+                    'character_id': 2,
+                    'payload_json': {
                         'kind': 'ConnectLocations',
                         'from_name': 'London',
                         'to_name': 'Tbilisi',
@@ -272,7 +275,7 @@ class TestMultiverse(unittest.TestCase):
     def fetch_actions(self) -> list[Any]:
         rows: list[Any] = self.mdb.all(
             '''
-                select tick, subtick, character_id, payload
+                select tick, subtick, character_id, payload_json
                 from actions order by tick, subtick
             '''
         )
@@ -280,7 +283,7 @@ class TestMultiverse(unittest.TestCase):
             'tick': row[0],
             'subtick': row[1],
             'character_id': row[2],
-            'payload': json.loads(row[3])
+            'payload_json': json.loads(row[3])
         }, rows))
 
     # independent universe DB accessor

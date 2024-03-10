@@ -65,11 +65,11 @@ class Multiverse:
                 create table actions (
                     tick integer not null,
                     subtick integer not null,
-                    payload text not null,
-                    character_id integer,
+                    payload_json text not null,
+                    character_id integer not null,
                     universe_id integer,
                     
-                    primary key (tick, subtick, payload, character_id),
+                    primary key (tick, subtick),
                     foreign key (character_id) references characters (id),
                     foreign key (universe_id) references universes (id)
                 );
@@ -79,6 +79,10 @@ class Multiverse:
                 ('tick', 0)
             )
             self.mdb.execute("insert into players (id) values ('root')")
+            self.mdb.execute('''
+                insert into characters (id, parent_id, universe_id, player_id)
+                values (0, null, null, 'root')
+            ''')
             self.mdb.commit()
         for row in self.mdb.execute('select id, parent_id from universes').fetchall():
             self.universe_db_connect(row[0], row[1])
@@ -97,7 +101,7 @@ class Multiverse:
     def apply(
             self,
             action: dataclass,
-            player_id: str = 'root'  # TODO authorisation
+            character_id: int = 0  # TODO authorisation
     ) -> None:
         logging.debug({
             'event_type': 'BEFORE_APPLY',
@@ -185,6 +189,7 @@ class Multiverse:
     def record_action(
             self,
             subtick: int,
+            character_id: int,
             action: dataclass
     ) -> None:
         logging.debug({
@@ -197,10 +202,10 @@ class Multiverse:
         ad['kind'] = type(action).__name__
         self.mdb.execute(
             '''
-                insert into actions (tick, subtick, payload, character_id, universe_id) 
+                insert into actions (tick, subtick, payload_json, character_id, universe_id) 
                 values (?, ?, ?, ?, ?)
             ''',
-            (self.tick, subtick, json.dumps(ad), ad.get('character_id'), ad.get('universe_id'))
+            (self.tick, subtick, json.dumps(ad), character_id, ad.get('universe_id'))
         )
 
     def commit(self) -> None:
