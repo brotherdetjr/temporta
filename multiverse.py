@@ -4,10 +4,12 @@ import json
 import logging
 import os
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from sqlite3 import Connection
 from typing import Dict
+
+from actions import CreatePlayer, CreateUniverse, CreateLocation, ConnectLocations, CreateCharacter
 
 # TODO remove
 logging.basicConfig(level=logging.DEBUG)
@@ -65,7 +67,7 @@ class Multiverse:
                     tick integer not null,
                     subtick integer not null,
                     payload text not null,
-                    character_id integer not null,
+                    character_id integer,
                     universe_id integer,
                     
                     primary key (tick, subtick, payload, character_id),
@@ -77,6 +79,7 @@ class Multiverse:
                 'insert into properties (name, value) values (?, ?)',
                 ('tick', 0)
             )
+            self.mdb.execute("insert into players (id) values ('root')")
             self.mdb.commit()
         for row in self.mdb.execute('select id, parent_id from universes').fetchall():
             self.universe_db_connect(row[0], row[1])
@@ -94,33 +97,21 @@ class Multiverse:
 
     def apply(
             self,
-            payload: dict[str, str | int] | str | None = None,
-            character_id: str | None = None  # TODO character_id-based authorisation?
+            action: dataclass,
+            player_id: str = 'root'  # TODO authorisation
     ) -> None:
         logging.debug({
             'event_type': 'BEFORE_APPLY',
             'tick': self.tick,
-            'payload': payload
+            'action': action
         })
         try:
-            match (payload, character_id):
+            match action:
 
-                case (
-                    {
-                        'kind': 'CreatePlayer',
-                        'player_id': str() as player_id
-                    },
-                    None
-                ):
+                case CreatePlayer(player_id):
                     self.mdb.execute('insert into players (id) values (?)', (player_id,))
 
-                case (
-                    {
-                        'kind': 'CreateUniverse',
-                        'parent_id': (int() | None) as parent_id
-                    },
-                    None,
-                ):
+                case CreateUniverse(parent_id):
                     universe_id: int = self.mdb.execute(
                         'insert into universes (parent_id) values (?)',
                         (parent_id,)
@@ -146,30 +137,13 @@ class Multiverse:
                         create index directions_from_name_idx on directions (from_name);
                     ''')
 
-                case (
-                    {
-                        'kind': 'CreateLocation',
-                        'universe_id': int() as universe_id,
-                        'name': str() as name,
-                        'description': (str() | None) as description
-                    },
-                    _
-                ):
+                case CreateLocation(name, universe_id, description):
                     self.udb(universe_id).execute(
                         'insert into locations (name, description) values (?, ?)',
                         (name, description)
                     )
 
-                case(
-                    {
-                        'kind': 'ConnectLocations',
-                        'universe_id': int() as universe_id,
-                        'from_name': str() as from_name,
-                        'to_name': str() as to_name,
-                        'travel_time': int() as travel_time
-                    },
-                    _
-                ):
+                case ConnectLocations(from_name, to_name, universe_id, travel_time):
                     if from_name == to_name:
                         raise Exception('Cannot connect location to itself')
                     if travel_time < 0:
@@ -185,15 +159,7 @@ class Multiverse:
                         ]
                     )
 
-                case(
-                    {
-                        'kind': 'CreateCharacter',
-                        'parent_id': (int() | None) as parent_id,
-                        'universe_id': (int() | None) as universe_id,
-                        'player_id': (str() | None) as player_id
-                    },
-                    _
-                ):
+                case CreateCharacter(player_id, parent_id, universe_id):
                     if parent_id is None and player_id is None:
                         raise Exception('parent_id or player_id must not be None')
                     self.mdb.execute(
@@ -210,7 +176,8 @@ class Multiverse:
             logging.error({
                 'event_type': 'APPLY_ERROR',
                 'tick': self.tick,
-                'value': {'error': e, 'payload': payload}
+                'error': e,
+                'action': action
             })
 
     def udb(self, universe_id: int) -> Connection:
@@ -219,20 +186,22 @@ class Multiverse:
     def record_action(
             self,
             subtick: int,
-            payload: dict[str, str | int] | str | None = None,
+            action: dataclass
     ) -> None:
         logging.debug({
             'event_type': 'STORE_ACTION',
             'tick': self.tick,
             'subtick': subtick,
-            'payload': payload
+            'action': action
         })
+        ad = asdict(action)
+        ad['kind'] = type(action).__name__
         self.mdb.execute(
             '''
                 insert into actions (tick, subtick, payload, character_id, universe_id) 
                 values (?, ?, ?, ?, ?)
             ''',
-            (self.tick, subtick, json.dumps(payload), payload['character_id'], payload.get('universe_id'))
+            (self.tick, subtick, json.dumps(ad), ad.get('character_id'), ad.get('universe_id'))
         )
 
     def commit(self) -> None:

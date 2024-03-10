@@ -1,4 +1,4 @@
-[temporta.py](temporta.py) WILL BE a draft implementation of the
+[temporta.py](multiverse.py) WILL BE a draft implementation of the
 [described idea](https://github.com/brotherdetjr/temporta/blob/master/README.md).
 First version will:
 - have a text-based UI (TUI)
@@ -31,7 +31,7 @@ choice.
 
 ## Multiverse Database Schema
 
-Concrete schemas can be found in the [application](temporta.py) itself. In this section we will describe the
+Concrete schemas can be found in the [application](multiverse.py) itself. In this section we will describe the
 high-level relational model.
 
 `players` table represents a Player's account.
