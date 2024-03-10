@@ -7,7 +7,6 @@ import sqlite3
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from sqlite3 import Connection
-from typing import Dict
 
 from actions import CreatePlayer, CreateUniverse, CreateLocation, ConnectLocations, CreateCharacter
 
@@ -24,7 +23,7 @@ class UniverseDatabase:
 class Multiverse:
     instance_id: str
     mdb: Connection
-    universe_dbs: Dict[int, UniverseDatabase]
+    universe_dbs: dict[int, UniverseDatabase]
     tick: int
 
     def __init__(self, instance_id: str) -> None:
