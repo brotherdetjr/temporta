@@ -22,3 +22,6 @@ class Conn:
 
     def close(self) -> None:
         self.connection.close()
+
+    def count(self, table_and_where_clause: str) -> int:
+        return self.connection.execute(f'select count(*) from {table_and_where_clause}').fetchone()[0]

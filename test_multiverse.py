@@ -9,7 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from actions import CreatePlayer, CreateUniverse, CreateLocation, ConnectLocations, CreateCharacter
-from multiverse import Multiverse
+from multiverse import Multiverse, ROOT_CHARACTER_ID
 from testutil import Conn
 
 # TODO remove
@@ -48,8 +48,8 @@ class TestMultiverse(unittest.TestCase):
             self.mdb.all('select id from players')
         )
         # when
-        self.multiverse.apply(CreatePlayer(player_id='player1'))
-        self.multiverse.apply(CreatePlayer(player_id='player2'))
+        self.multiverse.apply(CreatePlayer(player_id='player1'), ROOT_CHARACTER_ID)
+        self.multiverse.apply(CreatePlayer(player_id='player2'), ROOT_CHARACTER_ID)
         self.multiverse.commit()
         # then
         self.assertEqual(
@@ -57,7 +57,7 @@ class TestMultiverse(unittest.TestCase):
             self.mdb.all('select id from players')
         )
         # when duplicate is requested
-        self.multiverse.apply(CreatePlayer(player_id='player2'))
+        self.multiverse.apply(CreatePlayer(player_id='player2'), ROOT_CHARACTER_ID)
         self.multiverse.commit()
         # then no changes happen
         self.assertEqual(
@@ -67,7 +67,7 @@ class TestMultiverse(unittest.TestCase):
 
     def test_create_universe(self):
         # when
-        self.multiverse.apply(CreateUniverse())
+        self.multiverse.apply(CreateUniverse(), ROOT_CHARACTER_ID)
         self.multiverse.commit()
         # then first universe db is created
         self.assertEqual(
@@ -80,10 +80,11 @@ class TestMultiverse(unittest.TestCase):
 
     def test_create_location(self):
         # given
-        self.multiverse.apply(CreateUniverse())
+        self.multiverse.apply(CreateUniverse(), ROOT_CHARACTER_ID)
         # when
         self.multiverse.apply(
-            CreateLocation(name='Strezhevoy', universe_id=1, description='The best town in the world')
+            CreateLocation(name='Strezhevoy', universe_id=1, description='The best town in the world'),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.commit()
         # then
@@ -93,7 +94,8 @@ class TestMultiverse(unittest.TestCase):
         )
         # when a location with duplicate name is added
         self.multiverse.apply(
-            CreateLocation(name='Strezhevoy', universe_id=1, description='The best town in the world')
+            CreateLocation(name='Strezhevoy', universe_id=1, description='The best town in the world'),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.commit()
         # then nothing is changed
@@ -104,22 +106,27 @@ class TestMultiverse(unittest.TestCase):
 
     def test_connect_locations(self):
         # given
-        self.multiverse.apply(CreateUniverse())
+        self.multiverse.apply(CreateUniverse(), ROOT_CHARACTER_ID)
         self.multiverse.apply(
-            CreateLocation(name='Strezhevoy', universe_id=1, description='The best town in the world')
+            CreateLocation(name='Strezhevoy', universe_id=1, description='The best town in the world'),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.apply(
-            CreateLocation(name='Beijing', universe_id=1, description='The capital of China')
+            CreateLocation(name='Beijing', universe_id=1, description='The capital of China'),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.apply(
-            CreateLocation(name='London', universe_id=1, description='The capital of the UK')
+            CreateLocation(name='London', universe_id=1, description='The capital of the UK'),
+            ROOT_CHARACTER_ID
         )
         # when
         self.multiverse.apply(
-            ConnectLocations(from_name='Strezhevoy', to_name='Beijing', universe_id=1, travel_time=3510)
+            ConnectLocations(from_name='Strezhevoy', to_name='Beijing', universe_id=1, travel_time=3510),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.apply(
-            ConnectLocations(from_name='Strezhevoy', to_name='London', universe_id=1, travel_time=6000)
+            ConnectLocations(from_name='Strezhevoy', to_name='London', universe_id=1, travel_time=6000),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.commit()
         # then
@@ -134,7 +141,8 @@ class TestMultiverse(unittest.TestCase):
         )
         # when inserting duplicate
         self.multiverse.apply(
-            ConnectLocations(from_name='Strezhevoy', to_name='Beijing', universe_id=1, travel_time=9000)
+            ConnectLocations(from_name='Strezhevoy', to_name='Beijing', universe_id=1, travel_time=9000),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.commit()
         # then nothing changes
@@ -149,7 +157,8 @@ class TestMultiverse(unittest.TestCase):
         )
         # when linking to itself
         self.multiverse.apply(
-            ConnectLocations(from_name='Strezhevoy', to_name='Strezhevoy', universe_id=1, travel_time=100500)
+            ConnectLocations(from_name='Strezhevoy', to_name='Strezhevoy', universe_id=1, travel_time=100500),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.commit()
         # then nothing changes
@@ -164,7 +173,8 @@ class TestMultiverse(unittest.TestCase):
         )
         # when linking with negative travel time
         self.multiverse.apply(
-            ConnectLocations(from_name='London', to_name='Beijing', universe_id=1, travel_time=-2)
+            ConnectLocations(from_name='London', to_name='Beijing', universe_id=1, travel_time=-2),
+            ROOT_CHARACTER_ID
         )
         self.multiverse.commit()
         # then nothing changes
@@ -190,14 +200,86 @@ class TestMultiverse(unittest.TestCase):
         # then
         self.assertEqual(2, self.mdb.one("select value from properties where name='tick'")[0])
 
-    # TODO test for CreateCharacter
+    def test_create_character(self):
+        # given
+        self.multiverse.apply(CreatePlayer(player_id='player1'), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+
+        # when non-root character tries to create another one
+        self.multiverse.apply(CreateCharacter(player_id='player1'), 123)
+        self.multiverse.commit()
+        # then nothing is added to the table
+        self.assertEqual(1, self.mdb.count('characters'))
+
+        # when all-null character is requested
+        self.multiverse.apply(CreateCharacter(player_id=None, universe_id=None, parent_id=None), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then nothing is added to the table
+        self.assertEqual(1, self.mdb.count('characters'))
+
+        # when both parent_id and player_id are not None
+        self.multiverse.apply(CreateCharacter(player_id='player1', parent_id=0), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then nothing is added to the table
+        self.assertEqual(1, self.mdb.count('characters'))
+
+        # when
+        self.multiverse.apply(CreateCharacter(player_id='root'), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then nothing is added to the table
+        self.assertEqual(1, self.mdb.count('characters'))
+
+        # when new character belongs to non-existent universe
+        self.multiverse.apply(CreateCharacter(player_id='player1', universe_id=42), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then nothing is added to the table
+        self.assertEqual(1, self.mdb.count('characters'))
+
+        # when new character belongs to non-existent player
+        self.multiverse.apply(CreateCharacter(player_id='i_dont_exist'), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then nothing is added to the table
+        self.assertEqual(1, self.mdb.count('characters'))
+
+        # when new character belongs to non-existent parent
+        self.multiverse.apply(CreateCharacter(parent_id=3333), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then nothing is added to the table
+        self.assertEqual(1, self.mdb.count('characters'))
+
+        # when
+        self.multiverse.apply(CreateCharacter(player_id='player1'), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then
+        self.assertEqual(
+            [
+                (0, 'root', None, None),
+                (1, 'player1', None, None)
+            ],
+            self.mdb.all('select id, player_id, universe_id, parent_id from characters')
+        )
+
+        # when
+        self.multiverse.apply(CreateUniverse(), ROOT_CHARACTER_ID)
+        self.multiverse.apply(CreateCharacter(parent_id=1, universe_id=1), ROOT_CHARACTER_ID)
+        self.multiverse.commit()
+        # then
+        self.assertEqual(
+            [
+                (0, 'root', None, None),
+                (1, 'player1', None, None),
+                (2, None, 1, 1)
+            ],
+            self.mdb.all('select id, player_id, universe_id, parent_id from characters')
+        )
+
     def test_record_action(self):
         # given
-        self.multiverse.apply(CreateUniverse())
-        self.multiverse.apply(CreatePlayer(player_id='player1'))
-        self.multiverse.apply(CreatePlayer(player_id='player2'))
-        self.multiverse.apply(CreateCharacter(player_id='player1', universe_id=1))
-        self.multiverse.apply(CreateCharacter(player_id='player2', universe_id=1))
+        self.multiverse.apply(CreateUniverse(), ROOT_CHARACTER_ID)
+        self.multiverse.apply(CreatePlayer(player_id='player1'), ROOT_CHARACTER_ID)
+        self.multiverse.apply(CreatePlayer(player_id='player2'), ROOT_CHARACTER_ID)
+        self.multiverse.apply(CreateCharacter(player_id='player1', universe_id=1), ROOT_CHARACTER_ID)
+        self.multiverse.apply(CreateCharacter(player_id='player2', universe_id=1), ROOT_CHARACTER_ID)
         self.multiverse.commit()
         # when
         self.multiverse.record_action(

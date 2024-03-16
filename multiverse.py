@@ -10,6 +10,9 @@ from sqlite3 import Connection
 
 from actions import CreatePlayer, CreateUniverse, CreateLocation, ConnectLocations, CreateCharacter
 
+ROOT_PLAYER_ID = 'root'
+ROOT_CHARACTER_ID = 0
+
 
 @dataclass
 class UniverseDatabase:
@@ -74,11 +77,11 @@ class Multiverse:
                 'insert into properties (name, value) values (?, ?)',
                 ('tick', 0)
             )
-            self.mdb.execute("insert into players (id) values ('root')")
+            self.mdb.execute("insert into players (id) values (?)", (ROOT_PLAYER_ID, ))
             self.mdb.execute('''
                 insert into characters (id, parent_id, universe_id, player_id)
-                values (0, null, null, 'root')
-            ''')
+                values (?, null, null, 'root')
+            ''', (ROOT_CHARACTER_ID, ))
             self.mdb.commit()
         for row in self.mdb.execute('select id, parent_id from universes').fetchall():
             self.universe_db_connect(row[0], row[1])
@@ -97,7 +100,7 @@ class Multiverse:
     def apply(
             self,
             action: dataclass,
-            character_id: int = 0  # TODO authorisation
+            character_id: int  # TODO authorisation
     ) -> None:
         logging.debug({
             'event_type': 'BEFORE_APPLY',
@@ -157,9 +160,13 @@ class Multiverse:
                         ]
                     )
 
-                case CreateCharacter(player_id, parent_id, universe_id):
-                    if parent_id is None and player_id is None:
-                        raise Exception('parent_id or player_id must not be None')
+                case CreateCharacter(player_id, universe_id, parent_id):
+                    if character_id != ROOT_CHARACTER_ID:
+                        raise Exception('Action permitted only for root character')
+                    if (parent_id is None) == (player_id is None):
+                        raise Exception('Exactly one of parent_id or player_id must not be None')
+                    if player_id == 'root':
+                        raise Exception('No additional characters are allowed for root player')
                     self.mdb.execute(
                         'insert into characters (parent_id, universe_id, player_id) values (?, ?, ?)',
                         (parent_id, universe_id, player_id)
