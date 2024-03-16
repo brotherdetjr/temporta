@@ -10,9 +10,6 @@ from sqlite3 import Connection
 
 from actions import CreatePlayer, CreateUniverse, CreateLocation, ConnectLocations, CreateCharacter
 
-# TODO remove
-logging.basicConfig(level=logging.DEBUG)
-
 
 @dataclass
 class UniverseDatabase:
@@ -23,7 +20,6 @@ class UniverseDatabase:
 class Multiverse:
     instance_id: str
     mdb: Connection
-    universe_dbs: dict[int, UniverseDatabase]
     tick: int
 
     def __init__(self, instance_id: str) -> None:
@@ -120,8 +116,7 @@ class Multiverse:
                         (parent_id,)
                     ).lastrowid
                     self.universe_db_connect(universe_id, parent_id)
-                    udb: Connection = self.universe_dbs[universe_id].connection
-                    udb.executescript('''
+                    self.udb(universe_id).executescript('''
                         create table locations (
                             name text primary key,
                             description text not null

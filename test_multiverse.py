@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import unittest
@@ -10,6 +11,9 @@ from uuid import uuid4
 from actions import CreatePlayer, CreateUniverse, CreateLocation, ConnectLocations, CreateCharacter
 from multiverse import Multiverse
 from testutil import Conn
+
+# TODO remove
+logging.basicConfig(level=logging.DEBUG)
 
 
 class TestMultiverse(unittest.TestCase):
