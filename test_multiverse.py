@@ -64,6 +64,14 @@ class TestMultiverse(unittest.TestCase):
             [('root',), ('player1',), ('player2',)],
             self.mdb.all('select id from players')
         )
+        # when making an authorized request
+        self.multiverse.apply(CreatePlayer(player_id='player3'), 123)
+        self.multiverse.commit()
+        # then no changes happen
+        self.assertEqual(
+            [('root',), ('player1',), ('player2',)],
+            self.mdb.all('select id from players')
+        )
 
     def test_create_universe(self):
         # when
@@ -71,12 +79,21 @@ class TestMultiverse(unittest.TestCase):
         self.multiverse.commit()
         # then first universe db is created
         self.assertEqual(
+            [(1, None)],
+            self.mdb.all('select id, parent_id from universes')
+        )
+        self.assertEqual(
             ('empty',),
             self.udb(1).one("select 'empty'")
         )
-        # and 100500th db is not created yet
-        with self.assertRaises(Exception):
-            self.udb(100500)
+        # when making an authorized request
+        self.multiverse.apply(CreateUniverse(), 123)
+        self.multiverse.commit()
+        # then no changes happen
+        self.assertEqual(
+            [(1, None)],
+            self.mdb.all('select id, parent_id from universes')
+        )
 
     def test_create_location(self):
         # given
@@ -96,6 +113,17 @@ class TestMultiverse(unittest.TestCase):
         self.multiverse.apply(
             CreateLocation(name='Strezhevoy', universe_id=1, description='The best town in the world'),
             ROOT_CHARACTER_ID
+        )
+        self.multiverse.commit()
+        # then nothing is changed
+        self.assertEqual(
+            [('Strezhevoy', 'The best town in the world')],
+            self.udb(1).all('select name, description from locations')
+        )
+        # when making an authorized request
+        self.multiverse.apply(
+            CreateLocation(name='Tomsk', universe_id=1, description='Not my favourite city'),
+            123
         )
         self.multiverse.commit()
         # then nothing is changed
@@ -187,6 +215,22 @@ class TestMultiverse(unittest.TestCase):
             ],
             self.udb(1).all('select from_name, to_name, travel_time, ordinal from directions')
         )
+        # when making an authorized request
+        self.multiverse.apply(
+            ConnectLocations(from_name='London', to_name='Beijing', universe_id=1, travel_time=999),
+            123
+        )
+        self.multiverse.commit()
+        # then nothing changes
+        self.assertEqual(
+            [
+                ('Strezhevoy', 'Beijing', 3510, 0),
+                ('Beijing', 'Strezhevoy', 3510, 0),
+                ('Strezhevoy', 'London', 6000, 1),
+                ('London', 'Strezhevoy', 6000, 0)
+            ],
+            self.udb(1).all('select from_name, to_name, travel_time, ordinal from directions')
+        )
 
     def test_commit(self):
         # expect
@@ -205,7 +249,7 @@ class TestMultiverse(unittest.TestCase):
         self.multiverse.apply(CreatePlayer(player_id='player1'), ROOT_CHARACTER_ID)
         self.multiverse.commit()
 
-        # when non-root character tries to create another one
+        # when making an authorized request
         self.multiverse.apply(CreateCharacter(player_id='player1'), 123)
         self.multiverse.commit()
         # then nothing is added to the table

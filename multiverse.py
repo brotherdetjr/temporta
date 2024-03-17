@@ -100,7 +100,7 @@ class Multiverse:
     def apply(
             self,
             action: dataclass,
-            character_id: int  # TODO authorisation
+            character_id: int
     ) -> None:
         logging.debug({
             'event_type': 'BEFORE_APPLY',
@@ -111,9 +111,13 @@ class Multiverse:
             match action:
 
                 case CreatePlayer(player_id):
+                    if character_id != ROOT_CHARACTER_ID:
+                        raise Exception('Action permitted only for root character')
                     self.mdb.execute('insert into players (id) values (?)', (player_id,))
 
                 case CreateUniverse(parent_id):
+                    if character_id != ROOT_CHARACTER_ID:
+                        raise Exception('Action permitted only for root character')
                     universe_id: int = self.mdb.execute(
                         'insert into universes (parent_id) values (?)',
                         (parent_id,)
@@ -139,12 +143,16 @@ class Multiverse:
                     ''')
 
                 case CreateLocation(name, universe_id, description):
+                    if character_id != ROOT_CHARACTER_ID:
+                        raise Exception('Action permitted only for root character')
                     self.udb(universe_id).execute(
                         'insert into locations (name, description) values (?, ?)',
                         (name, description)
                     )
 
                 case ConnectLocations(from_name, to_name, universe_id, travel_time):
+                    if character_id != ROOT_CHARACTER_ID:
+                        raise Exception('Action permitted only for root character')
                     if from_name == to_name:
                         raise Exception('Cannot connect location to itself')
                     if travel_time < 0:
